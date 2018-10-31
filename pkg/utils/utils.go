@@ -26,6 +26,7 @@ import (
 )
 
 const (
+	netDirectory     = "/sys/class/net/"
 	sysBusPci        = "/sys/bus/pci/devices"
 	totalVfFile      = "sriov_totalvfs"
 	configuredVfFile = "sriov_numvfs"
@@ -233,4 +234,67 @@ func GetUIODeviceFile(dev string) (devFile string, err error) {
 	devFile = filepath.Join("/dev", files[0].Name())
 
 	return
+}
+
+// GetSriovPfList returns a list of SRIOV capable PF's PCI addresses as []string
+func GetSriovPfList() ([]string, error) {
+
+	sriovNetDevices := []string{}
+
+	netDevices, err := ioutil.ReadDir(netDirectory)
+	if err != nil {
+		return sriovNetDevices, fmt.Errorf("Error. Cannot read %s for network device names. Err: %v", netDirectory, err)
+	}
+
+	if len(netDevices) < 1 {
+		return sriovNetDevices, fmt.Errorf("Error. No network device found in %s directory", netDirectory)
+	}
+
+	for _, dev := range netDevices {
+		sriovDirPath := filepath.Join(netDirectory, dev.Name())
+		dir, err := os.Stat(sriovDirPath)
+		if err != nil {
+			continue
+		}
+		if !dir.Mode().IsDir() {
+			// Could be e.g. bonding_masters file
+			continue
+		}
+
+		sriovFilePath := filepath.Join(sriovDirPath, "device", "sriov_numvfs")
+
+		if f, err := os.Lstat(sriovFilePath); !os.IsNotExist(err) {
+			if f.Mode().IsRegular() { // and its a regular file
+				// get PCI address of the the device
+				if pciAddr, err := getPCIAddrFromPFName(dev.Name()); err == nil {
+					sriovNetDevices = append(sriovNetDevices, pciAddr)
+				} else {
+					return sriovNetDevices, err
+				}
+
+			}
+		}
+	}
+
+	return sriovNetDevices, nil
+}
+
+func getPCIAddrFromPFName(devName string) (string, error) {
+	devicePath := filepath.Join(netDirectory, devName, "device")
+	dirInfo, err := os.Lstat(devicePath)
+	if err != nil {
+		return "", fmt.Errorf("error reading device file for device %s, %q", devName, err)
+	}
+
+	if (dirInfo.Mode() & os.ModeSymlink) == 0 {
+		return "", fmt.Errorf("%s has no device symlink: %q", devName, err)
+	}
+
+	pciinfo, err := os.Readlink(devicePath)
+	if err != nil {
+		return "", fmt.Errorf("error reading symlink link of device %q: %v", devName, err)
+	}
+
+	pciAdrr := filepath.Base(pciinfo)
+	return pciAdrr, nil
 }

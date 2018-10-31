@@ -33,6 +33,7 @@ const (
 type cliParams struct {
 	configFile     string
 	resourcePrefix string
+	autoDiscovery  bool
 }
 
 type resourceManager struct {
@@ -69,6 +70,26 @@ func (rm *resourceManager) readConfig() error {
 		rm.configList = append(rm.configList, &resources.ResourceList[i])
 	}
 
+	return nil
+}
+
+// getDefaultConfig creates default configuration with auto discovered
+// SRIOV capable NICs in host system
+func (rm *resourceManager) getDefaultConfig() error {
+	glog.Infof("Getting default config...")
+	sriovPFs, err := utils.GetSriovPfList()
+	if err != nil {
+		glog.Error("error getting SRIOV capable device list %q", err)
+		return err
+	}
+
+	rConfig := &types.ResourceConfig{
+		ResourceName: "sriov",
+		SriovMode:    true,
+		DeviceType:   "netdevice",
+		RootDevices:  sriovPFs,
+	}
+	rm.configList = append(rm.configList, rConfig)
 	return nil
 }
 

@@ -33,6 +33,8 @@ func flagInit(cp *cliParams) {
 		"JSON device pool config file location")
 	flag.StringVar(&cp.resourcePrefix, "resource-prefix", "intel.com",
 		"resource name prefix used for K8s extended resource")
+	flag.BoolVar(&cp.autoDiscovery, "auto-discover", false,
+		"Run SRIOV device plugin in auto-discovery mode; ignore config file.")
 }
 
 func main() {
@@ -41,21 +43,34 @@ func main() {
 	flag.Parse()
 	rm := newResourceManager(cp)
 
-	glog.Infof("resource manager reading configs")
-	if err := rm.readConfig(); err != nil {
-		glog.Errorf("error getting resources from file %v", err)
-		return
+	if cp.autoDiscovery {
+		glog.Infof("Running in auto-discovery mode")
+		// Get default server configurations
+		if err := rm.getDefaultConfig(); err != nil {
+			glog.Errorf("error getting default configurations %v", err)
+			glog.Errorf("unable to run SRIOV device plugin")
+			return
+		}
+	} else { // Reads config file
+		glog.Infof("Running with config file %s ", cp.configFile)
+		glog.Infof("resource manager reading configs")
+		if err := rm.readConfig(); err != nil {
+			glog.Errorf("error getting resources from file %v", err)
+			return
+		}
+
+		if len(rm.configList) < 1 {
+                       glog.Fatalf("Exiting.. no configuration given")			
+                       return                       
+		}
+
+		// Validate configs
+		if !rm.validConfigs() {
+			glog.Fatalf("Exiting.. one or more invalid configuration(s) given")
+			return
+		}
 	}
 
-	if len(rm.configList) < 1 {
-		return // No config found
-	}
-
-	// Validate configs
-	if !rm.validConfigs() {
-		glog.Fatalf("Exiting.. one or more invalid configuration(s) given")
-		return
-	}
 	glog.Infof("Initializing resource servers")
 	if err := rm.initServers(); err != nil {
 		glog.Errorf("error initializing resource servers %v", err)
