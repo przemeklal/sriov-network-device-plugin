@@ -17,7 +17,6 @@ package resources
 import (
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/intel/sriov-network-device-plugin/pkg/types"
 )
 
@@ -49,16 +48,28 @@ func (rf *resourceFactory) GetResourceServer(rp types.ResourcePool) (types.Resou
 }
 
 // GetResourcePool returns and instance of ResourcePool for a ResourceConfig
-func (rf *resourceFactory) GetResourcePool(rc *types.ResourceConfig) types.ResourcePool {
-	glog.Infof("Resource pool type: %s", rc.DeviceType)
-	switch rc.DeviceType {
-	case "vfio":
-		return newVfioResourcePool(rc)
+func (rf *resourceFactory) GetInfoProvider(name string) types.DeviceInfoProvider {
+	switch name {
+	case "vfio-pci":
+		return newVfioResourcePool()
 	case "uio":
-		return newUioResourcePool(rc)
-	case "netdevice":
-		return newNetDevicePool(rc)
+		return newUioResourcePool()
 	default:
-		return newGenericResourcePool(rc)
+		return newNetDevicePool()
+	}
+}
+
+// GetResourcePool returns and instance of ResourcePool for a ResourceConfig
+func (rf *resourceFactory) GetSelector(attr string, values []string) (types.DeviceSelector, error) {
+	// glog.Infof("GetSelector(): selector for attribute: %s", attr)
+	switch attr {
+	case "vendors":
+		return newVendorSelector(values), nil
+	case "devices":
+		return newDeviceSelector(values), nil
+	case "drivers":
+		return newDriverSelector(values), nil
+	default:
+		return nil, fmt.Errorf("GetSelector(): invalid attribute %s", attr)
 	}
 }
