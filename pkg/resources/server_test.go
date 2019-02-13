@@ -7,6 +7,7 @@ import (
 
 	"fmt"
 	"os"
+	"time"
 
 	pluginapi "k8s.io/kubernetes/pkg/kubelet/apis/deviceplugin/v1beta1"
 
@@ -139,11 +140,11 @@ var _ = Describe("Server", func() {
 					Expect(err).NotTo(HaveOccurred())
 				}()
 
-				Eventually(rs.termSignal).Should(Receive())
-				Eventually(rs.stopWatcher).Should(Receive())
+				Eventually(rs.termSignal, time.Second*10).Should(Receive())
+				Eventually(rs.stopWatcher, time.Second*10).Should(Receive())
 
 				close(done)
-			}, 10.0)
+			}, 30.0)
 		})
 	})
 
@@ -287,13 +288,13 @@ var _ = Describe("Server", func() {
 				}()
 
 				// wait for the initial update to reach ListAndWatchServer
-				Eventually(lwSrv.updates).Should(Receive())
+				Eventually(lwSrv.updates, time.Second*10).Should(Receive())
 				// this time it should break
 				rs.updateSignal <- true
-				Eventually(lwSrv.updates).ShouldNot(Receive())
+				Eventually(lwSrv.updates, time.Second*10).ShouldNot(Receive())
 
 				close(done)
-			}, 10.0)
+			}, 30.0)
 		})
 		Context("when received multiple update requests and then the term signal", func() {
 			It("should receive not fail", func(done Done) {
@@ -321,17 +322,17 @@ var _ = Describe("Server", func() {
 				}()
 
 				// wait for the initial update to reach ListAndWatchServer
-				Eventually(lwSrv.updates).Should(Receive())
+				Eventually(lwSrv.updates, time.Second*10).Should(Receive())
 
 				// send another set of updates and wait for the ListAndWatchServer
 				rs.updateSignal <- true
-				Eventually(lwSrv.updates).Should(Receive())
+				Eventually(lwSrv.updates, time.Second*10).Should(Receive())
 
 				// finally send term signal
 				rs.termSignal <- true
 
 				close(done)
-			}, 10.0)
+			}, 30.0)
 		})
 	})
 })
