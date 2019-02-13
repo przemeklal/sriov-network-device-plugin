@@ -25,14 +25,13 @@ var _ = Describe("VfioPool", func() {
 		})
 	})
 	Describe("device discovery", func() {
-		var (
-			pool *vfioResourcePool
-			err  error
-			fs   *utils.FakeFilesystem
-		)
 		Context("in SRIOV mode when SRIOV is enabled", func() {
+			var (
+				pool *vfioResourcePool
+				err  error
+			)
 			BeforeEach(func() {
-				fs = &utils.FakeFilesystem{
+				fs := &utils.FakeFilesystem{
 					Dirs: []string{
 						"sys/bus/pci/devices/0000:02:00.0",
 						"sys/bus/pci/devices/0000:02:00.1",
@@ -89,6 +88,11 @@ var _ = Describe("VfioPool", func() {
 			})
 		})
 		Context("in SRIOV mode when SRIOV is disabled", func() {
+			var (
+				pool *vfioResourcePool
+				err  error
+				fs   *utils.FakeFilesystem
+			)
 			BeforeEach(func() {
 				fs = &utils.FakeFilesystem{
 					Dirs: []string{
@@ -122,6 +126,11 @@ var _ = Describe("VfioPool", func() {
 			})
 		})
 		Context("PFs only", func() {
+			var (
+				pool *vfioResourcePool
+				err  error
+				fs   *utils.FakeFilesystem
+			)
 			BeforeEach(func() {
 
 				fs = &utils.FakeFilesystem{

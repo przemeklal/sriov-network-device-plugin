@@ -16,19 +16,17 @@ import (
 )
 
 var _ = Describe("Server", func() {
-	var (
-		rs *resourceServer
-		fs = &utils.FakeFilesystem{Dirs: []string{"tmp"}}
-	)
 	Describe("creating new instance of resource server", func() {
 		Context("valid arguments are passed", func() {
+			var rs *resourceServer
 			BeforeEach(func() {
+				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
 				defer fs.Use()()
-				sockDir = fs.RootDir
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fakename")
 				obj := newResourceServer("fakeprefix", "fakesuffix", &rp)
 				rs = obj.(*resourceServer)
+				rs.sockDir = fs.RootDir
 			})
 			It("should have the properties correctly assigned", func() {
 				Expect(rs.resourcePool.GetResourceName()).To(Equal("fakename"))
@@ -39,13 +37,14 @@ var _ = Describe("Server", func() {
 	})
 	DescribeTable("registering with Kubelet",
 		func(shouldRunServer, shouldServerFail, shouldFail bool) {
+			fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
 			defer fs.Use()()
-			sockDir = fs.RootDir
 			rp := mocks.ResourcePool{}
 			rp.On("GetResourceName").Return("fakename")
 			obj := newResourceServer("fakeprefix", "fakesuffix", &rp)
-			rs = obj.(*resourceServer)
-			registrationServer := createFakeRegistrationServer(shouldServerFail)
+			rs := obj.(*resourceServer)
+			rs.sockDir = fs.RootDir
+			registrationServer := createFakeRegistrationServer(fs.RootDir, shouldServerFail)
 			if shouldRunServer {
 				os.MkdirAll(pluginapi.DevicePluginPath, 0755)
 				registrationServer.start()
@@ -68,14 +67,15 @@ var _ = Describe("Server", func() {
 		Context("when device discovery has failed", func() {
 			var err error
 			BeforeEach(func() {
+				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
 				defer fs.Use()()
-				sockDir = fs.RootDir
 				rp := mocks.ResourcePool{}
 				rp.
 					On("GetResourceName").Return("fakename").
 					On("DiscoverDevices").Return(fmt.Errorf("fake error"))
 
-				rs := newResourceServer("fakeprefix", "fakesuffix", &rp)
+				rs := newResourceServer("fakeprefix", "fakesuffix", &rp).(*resourceServer)
+				rs.sockDir = fs.RootDir
 				err = rs.Init()
 			})
 			It("should fail", func() {
@@ -85,14 +85,15 @@ var _ = Describe("Server", func() {
 		Context("when device discovery has been succesful", func() {
 			var err error
 			BeforeEach(func() {
+				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
 				defer fs.Use()()
-				sockDir = fs.RootDir
 				rp := mocks.ResourcePool{}
 				rp.
 					On("GetResourceName").Return("fakename").
 					On("DiscoverDevices").Return(nil)
 
-				rs := newResourceServer("fakeprefix", "fakesuffix", &rp)
+				rs := newResourceServer("fakeprefix", "fakesuffix", &rp).(*resourceServer)
+				rs.sockDir = fs.RootDir
 				err = rs.Init()
 			})
 			It("should not fail", func() {
@@ -104,8 +105,8 @@ var _ = Describe("Server", func() {
 		// integration-like test for the resource server (positive case)
 		Context("succesfully", func() {
 			It("should register with kubelet", func(done Done) {
+				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
 				defer fs.Use()()
-				sockDir = fs.RootDir
 				fakeConf := &types.ResourceConfig{ResourceName: "fake", RootDevices: []string{"fakeid"}}
 				rp := mocks.ResourcePool{}
 				rp.
@@ -116,8 +117,9 @@ var _ = Describe("Server", func() {
 					On("Probe", fakeConf, map[string]*pluginapi.Device{}).Return(true)
 
 				rs := newResourceServer("fake.com", "fake", &rp).(*resourceServer)
+				rs.sockDir = fs.RootDir
 
-				registrationServer := createFakeRegistrationServer(false)
+				registrationServer := createFakeRegistrationServer(fs.RootDir, false)
 				os.MkdirAll(pluginapi.DevicePluginPath, 0755)
 				registrationServer.start()
 				defer registrationServer.stop()
@@ -141,7 +143,7 @@ var _ = Describe("Server", func() {
 				Eventually(rs.stopWatcher).Should(Receive())
 
 				close(done)
-			})
+			}, 10.0)
 		})
 	})
 
@@ -159,7 +161,7 @@ var _ = Describe("Server", func() {
 				On("GetMounts").
 				Return([]*pluginapi.Mount{{ContainerPath: "/dev/fake", HostPath: "/dev/fake", ReadOnly: false}})
 
-			rs := newResourceServer("fake.com", "fake", &rp)
+			rs := newResourceServer("fake.com", "fake", &rp).(*resourceServer)
 
 			resp, err := rs.Allocate(nil, req)
 
@@ -205,8 +207,8 @@ var _ = Describe("Server", func() {
 	})
 	DescribeTable("getting env variables",
 		func(in, expected map[string]string) {
+			fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
 			defer fs.Use()()
-			sockDir = fs.RootDir
 			deviceIDs := []string{"fakeid"}
 			rp := mocks.ResourcePool{}
 			rp.
@@ -215,6 +217,7 @@ var _ = Describe("Server", func() {
 
 			obj := newResourceServer("fake.com", "fake", &rp)
 			rs := *obj.(*resourceServer)
+			rs.sockDir = fs.RootDir
 			actual := rs.getEnvs(deviceIDs)
 			if len(in) == 0 {
 				Expect(actual).To(BeEmpty())
@@ -239,13 +242,14 @@ var _ = Describe("Server", func() {
 	Describe("ListAndWatch", func() {
 		Context("when first Send call in DevicePlugin_ListAndWatch failed", func() {
 			It("should fail", func() {
+				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
 				defer fs.Use()()
-				sockDir = fs.RootDir
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com").
 					On("GetDevices").Return(map[string]*pluginapi.Device{"00:00.01": {ID: "00:00.01", Health: "Healthy"}}).Once()
 
 				rs := newResourceServer("fake.com", "fake", &rp).(*resourceServer)
+				rs.sockDir = fs.RootDir
 
 				lwSrv := &fakeListAndWatchServer{
 					resourceServer: rs,
@@ -258,14 +262,15 @@ var _ = Describe("Server", func() {
 		})
 		Context("when Send call in DevicePlugin_ListAndWatch breaks", func() {
 			It("should receive not fail", func(done Done) {
+				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
 				defer fs.Use()()
-				sockDir = fs.RootDir
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com").
 					On("GetDevices").Return(map[string]*pluginapi.Device{"00:00.01": {ID: "00:00.01", Health: "Healthy"}}).Once().
 					On("GetDevices").Return(map[string]*pluginapi.Device{"00:00.02": {ID: "00:00.02", Health: "Healthy"}}).Once()
 
 				rs := newResourceServer("fake.com", "fake", &rp).(*resourceServer)
+				rs.sockDir = fs.RootDir
 
 				lwSrv := &fakeListAndWatchServer{
 					resourceServer: rs,
@@ -288,18 +293,19 @@ var _ = Describe("Server", func() {
 				Eventually(lwSrv.updates).ShouldNot(Receive())
 
 				close(done)
-			})
+			}, 10.0)
 		})
 		Context("when received multiple update requests and then the term signal", func() {
 			It("should receive not fail", func(done Done) {
+				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
 				defer fs.Use()()
-				sockDir = fs.RootDir
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com").
 					On("GetDevices").Return(map[string]*pluginapi.Device{"00:00.01": {ID: "00:00.01", Health: "Healthy"}}).Once().
 					On("GetDevices").Return(map[string]*pluginapi.Device{"00:00.02": {ID: "00:00.02", Health: "Healthy"}}).Once()
 
 				rs := newResourceServer("fake.com", "fake", &rp).(*resourceServer)
+				rs.sockDir = fs.RootDir
 
 				lwSrv := &fakeListAndWatchServer{
 					resourceServer: rs,
@@ -325,7 +331,7 @@ var _ = Describe("Server", func() {
 				rs.termSignal <- true
 
 				close(done)
-			})
+			}, 10.0)
 		})
 	})
 })
