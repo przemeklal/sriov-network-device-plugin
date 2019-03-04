@@ -102,7 +102,7 @@ func (rm *resourceManager) initServers() error {
 		// Create new ResourcePool
 		glog.Infof("")
 		glog.Infof("Creating new ResourcePool: %s", rc.ResourceName)
-		rPool, err := resources.NewResourcePool(rc, rm.netDeviceList, rm.rFactory)
+		rPool, err := rm.rFactory.GetResourcePool(rc, rm.netDeviceList)
 		if err != nil {
 			glog.Errorf("initServers(): error creating ResourcePool with config %+v: %q", rc, err)
 			return err

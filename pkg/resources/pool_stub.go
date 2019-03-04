@@ -28,51 +28,13 @@ type resourcePool struct {
 
 var _ types.ResourcePool = &resourcePool{}
 
-// NewResourcePool returns an instance of resourcePool
-func NewResourcePool(rc *types.ResourceConfig, deviceList []types.PciNetDevice, rFactory types.ResourceFactory) (types.ResourcePool, error) {
-	filteredDevice := deviceList
-
-	// filter by vendor list
-	if rc.Selectors.Vendors != nil && len(rc.Selectors.Vendors) > 0 {
-		if selector, err := rFactory.GetSelector("vendors", rc.Selectors.Vendors); err == nil {
-			filteredDevice = selector.Filter(filteredDevice)
-		}
-	}
-
-	// filter by device list
-	if rc.Selectors.Devices != nil && len(rc.Selectors.Devices) > 0 {
-		if selector, err := rFactory.GetSelector("devices", rc.Selectors.Devices); err == nil {
-			filteredDevice = selector.Filter(filteredDevice)
-		}
-	}
-
-	// filter by driver list
-	if rc.Selectors.Drivers != nil && len(rc.Selectors.Drivers) > 0 {
-		if selector, err := rFactory.GetSelector("drivers", rc.Selectors.Drivers); err == nil {
-			filteredDevice = selector.Filter(filteredDevice)
-		}
-	}
-
-	devicePool := make(map[string]types.PciNetDevice, 0)
-	apiDevices := make(map[string]*pluginapi.Device)
-	for _, dev := range filteredDevice {
-		pciAddr := dev.GetPciAddr()
-		devicePool[pciAddr] = dev
-		apiDevices[pciAddr] = dev.GetAPIDevice()
-		glog.Infof("device added: [pciAddr: %s, vendor: %s, device: %s, driver: %s]",
-			dev.GetPciAddr(),
-			dev.GetVendor(),
-			dev.GetDeviceCode(),
-			dev.GetDriver())
-	}
-
-	rPool := &resourcePool{
+// newResourcePool returns an instance of resourcePool
+func newResourcePool(rc *types.ResourceConfig, apiDevices map[string]*pluginapi.Device, devicePool map[string]types.PciNetDevice) types.ResourcePool {
+	return &resourcePool{
 		config:     rc,
 		devices:    apiDevices,
 		devicePool: devicePool,
 	}
-
-	return rPool, nil
 }
 
 func (rp *resourcePool) GetConfig() *types.ResourceConfig {

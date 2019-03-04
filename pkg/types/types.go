@@ -58,6 +58,7 @@ type ResourceFactory interface {
 	GetResourceServer(ResourcePool) (ResourceServer, error)
 	GetInfoProvider(string) DeviceInfoProvider
 	GetSelector(string, []string) (DeviceSelector, error)
+	GetResourcePool(rc *ResourceConfig, deviceList []PciNetDevice) (ResourcePool, error)
 }
 
 // ResourcePool represents a generic resource entity
