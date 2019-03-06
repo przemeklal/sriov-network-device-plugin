@@ -49,7 +49,7 @@ func (rf *resourceFactory) GetResourceServer(rp types.ResourcePool) (types.Resou
 	return nil, fmt.Errorf("factory: unable to get resource pool object")
 }
 
-// GetResourcePool returns and instance of ResourcePool for a ResourceConfig
+// GetInfoProvider returns an instance of DeviceInfoProvider using name as string
 func (rf *resourceFactory) GetInfoProvider(name string) types.DeviceInfoProvider {
 	switch name {
 	case "vfio-pci":
@@ -61,7 +61,7 @@ func (rf *resourceFactory) GetInfoProvider(name string) types.DeviceInfoProvider
 	}
 }
 
-// GetResourcePool returns and instance of ResourcePool for a ResourceConfig
+// GetSelector returns an instance of DeviceSelector using selector attribute string and its associated values
 func (rf *resourceFactory) GetSelector(attr string, values []string) (types.DeviceSelector, error) {
 	// glog.Infof("GetSelector(): selector for attribute: %s", attr)
 	switch attr {

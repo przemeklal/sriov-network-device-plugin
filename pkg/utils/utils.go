@@ -297,9 +297,6 @@ func GetDriverName(pciAddr string) (string, error) {
 	driverLink := filepath.Join(sysBusPci, pciAddr, "driver")
 	driverInfo, err := os.Readlink(driverLink)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return pciAddr, nil
-		}
 		return "", fmt.Errorf("error getting driver info for device %s %v", pciAddr, err)
 	}
 	return filepath.Base(driverInfo), nil

@@ -175,12 +175,13 @@ func (rm *resourceManager) discoverHostDevices() error {
 
 	devices := pci.ListDevices()
 	if len(devices) == 0 {
-		return fmt.Errorf("discoverDevices(): error: could not retrive PCI info: %v,", err)
+		glog.Warningf("discoverDevices(): no PCI network device found")
 	}
 	for _, device := range devices {
 		devClass, err := strconv.ParseInt(device.Class.ID, 16, 64)
 		if err != nil {
-			return fmt.Errorf("discoverDevices(): error parsing device class %v", err)
+			glog.Warningf("discoverDevices(): unable to parse device class for device %+v %q", device, err)
+			continue
 		}
 
 		// only interested in network class

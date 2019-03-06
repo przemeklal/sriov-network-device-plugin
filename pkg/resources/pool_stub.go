@@ -67,8 +67,14 @@ func (rp *resourcePool) GetDeviceSpecs(deviceIDs []string) []*pluginapi.DeviceSp
 	// Add vfio group specific devices
 	for _, id := range deviceIDs {
 		if dev, ok := rp.devicePool[id]; ok {
-			ds := dev.GetDeviceSpecs()
-			devSpecs = append(devSpecs, ds...)
+			newSpecs := dev.GetDeviceSpecs()
+			for _, ds := range newSpecs {
+				if !rp.deviceSpecExist(devSpecs, ds) {
+					devSpecs = append(devSpecs, ds)
+				}
+
+			}
+
 		}
 	}
 	return devSpecs
@@ -100,4 +106,13 @@ func (rp *resourcePool) GetMounts(deviceIDs []string) []*pluginapi.Mount {
 		}
 	}
 	return devMounts
+}
+
+func (rp *resourcePool) deviceSpecExist(specs []*pluginapi.DeviceSpec, newSpec *pluginapi.DeviceSpec) bool {
+	for _, sp := range specs {
+		if sp.HostPath == newSpec.HostPath {
+			return true
+		}
+	}
+	return false
 }
