@@ -126,7 +126,7 @@ var _ = Describe("Server", func() {
 				}()
 
 				Eventually(rs.termSignal, time.Second*10).Should(Receive())
-				Eventually(rs.stopWatcher, time.Second*10).Should(Receive())
+				//Eventually(rs.stopWatcher, time.Second*10).Should(Receive())
 
 				close(done)
 			}, 30.0)
