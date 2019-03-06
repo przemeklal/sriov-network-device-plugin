@@ -20,7 +20,7 @@ var _ = Describe("Server", func() {
 		Context("valid arguments are passed", func() {
 			var rs *resourceServer
 			BeforeEach(func() {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{Dirs: []string{"new_server"}}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fakename")
@@ -37,7 +37,7 @@ var _ = Describe("Server", func() {
 	})
 	DescribeTable("registering with Kubelet",
 		func(shouldRunServer, shouldServerFail, shouldFail bool) {
-			fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+			fs := &utils.FakeFilesystem{Dirs: []string{"registering"}}
 			defer fs.Use()()
 			rp := mocks.ResourcePool{}
 			rp.On("GetResourceName").Return("fakename")
@@ -67,7 +67,7 @@ var _ = Describe("Server", func() {
 		Context("in all scenarios", func() {
 			var err error
 			BeforeEach(func() {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{Dirs: []string{"init"}}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com")
@@ -84,7 +84,7 @@ var _ = Describe("Server", func() {
 		// integration-like test for the resource server (positive case)
 		Context("succesfully", func() {
 			It("should register with kubelet", func(done Done) {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{Dirs: []string{"integration"}}
 				defer fs.Use()()
 				fakeConf := &types.ResourceConfig{
 					ResourceName: "fake",
@@ -125,11 +125,11 @@ var _ = Describe("Server", func() {
 					Expect(err).NotTo(HaveOccurred())
 				}()
 
-				Eventually(rs.termSignal, time.Second*10).Should(Receive())
-				Eventually(rs.stopWatcher, time.Second*10).Should(Receive())
+				Eventually(rs.termSignal, time.Second*60).Should(Receive())
+				Eventually(rs.stopWatcher, time.Second*60).Should(Receive())
 
 				close(done)
-			}, 30.0)
+			}, 60.0)
 		})
 	})
 
@@ -193,7 +193,7 @@ var _ = Describe("Server", func() {
 	})
 	DescribeTable("getting env variables",
 		func(in []string, expected map[string]string) {
-			fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+			fs := &utils.FakeFilesystem{Dirs: []string{"env"}}
 			defer fs.Use()()
 			deviceIDs := []string{"fakeid"}
 			rp := mocks.ResourcePool{}
@@ -220,7 +220,7 @@ var _ = Describe("Server", func() {
 	Describe("ListAndWatch", func() {
 		Context("when first Send call in DevicePlugin_ListAndWatch failed", func() {
 			It("should fail", func() {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{Dirs: []string{"list_and_watch"}}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com").
@@ -240,7 +240,7 @@ var _ = Describe("Server", func() {
 		})
 		Context("when Send call in DevicePlugin_ListAndWatch breaks", func() {
 			It("should receive not fail", func(done Done) {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{Dirs: []string{"send_fails"}}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com").
@@ -265,17 +265,17 @@ var _ = Describe("Server", func() {
 				}()
 
 				// wait for the initial update to reach ListAndWatchServer
-				Eventually(lwSrv.updates, time.Second*30).Should(Receive())
+				Eventually(lwSrv.updates, time.Second*60).Should(Receive())
 				// this time it should break
 				rs.updateSignal <- true
-				Eventually(lwSrv.updates, time.Second*30).ShouldNot(Receive())
+				Eventually(lwSrv.updates, time.Second*60).ShouldNot(Receive())
 
 				close(done)
 			}, 60.0)
 		})
 		Context("when received multiple update requests and then the term signal", func() {
 			It("should receive not fail", func(done Done) {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{Dirs: []string{"multiple_requests"}}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com").
@@ -299,17 +299,17 @@ var _ = Describe("Server", func() {
 				}()
 
 				// wait for the initial update to reach ListAndWatchServer
-				Eventually(lwSrv.updates, time.Second*10).Should(Receive())
+				Eventually(lwSrv.updates, time.Second*60).Should(Receive())
 
 				// send another set of updates and wait for the ListAndWatchServer
 				rs.updateSignal <- true
-				Eventually(lwSrv.updates, time.Second*10).Should(Receive())
+				Eventually(lwSrv.updates, time.Second*60).Should(Receive())
 
 				// finally send term signal
 				rs.termSignal <- true
 
 				close(done)
-			}, 30.0)
+			}, 60.0)
 		})
 	})
 })
