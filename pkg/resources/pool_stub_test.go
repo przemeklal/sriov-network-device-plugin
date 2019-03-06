@@ -55,11 +55,10 @@ var _ = Describe("PoolStub", func() {
 
 				expected := []*pluginapi.DeviceSpec{
 					{ContainerPath: "/dev/vfio/vfio", HostPath: "/dev/vfio/vfio", Permissions: "mrw"},
-					{ContainerPath: "/dev/vfio/vfio", HostPath: "/dev/vfio/vfio", Permissions: "mrw"}, // TODO: duplicates?
 					{ContainerPath: "/dev/vfio/0", HostPath: "/dev/vfio/0", Permissions: "mrw"},
 					{ContainerPath: "/dev/vfio/1", HostPath: "/dev/vfio/1", Permissions: "mrw"},
 				}
-				Expect(specs).To(HaveLen(4)) // TODO: duplicates? should be 3 here?
+				Expect(specs).To(HaveLen(3))
 				Expect(specs).To(ConsistOf(expected))
 			})
 		})
