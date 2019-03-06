@@ -265,13 +265,13 @@ var _ = Describe("Server", func() {
 				}()
 
 				// wait for the initial update to reach ListAndWatchServer
-				Eventually(lwSrv.updates, time.Second*10).Should(Receive())
+				Eventually(lwSrv.updates, time.Second*30).Should(Receive())
 				// this time it should break
 				rs.updateSignal <- true
-				Eventually(lwSrv.updates, time.Second*10).ShouldNot(Receive())
+				Eventually(lwSrv.updates, time.Second*30).ShouldNot(Receive())
 
 				close(done)
-			}, 30.0)
+			}, 60.0)
 		})
 		Context("when received multiple update requests and then the term signal", func() {
 			It("should receive not fail", func(done Done) {
