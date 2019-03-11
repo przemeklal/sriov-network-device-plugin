@@ -20,7 +20,7 @@ var _ = Describe("Server", func() {
 		Context("valid arguments are passed", func() {
 			var rs *resourceServer
 			BeforeEach(func() {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fakename")
@@ -37,7 +37,7 @@ var _ = Describe("Server", func() {
 	})
 	DescribeTable("registering with Kubelet",
 		func(shouldRunServer, shouldServerFail, shouldFail bool) {
-			fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+			fs := &utils.FakeFilesystem{}
 			defer fs.Use()()
 			rp := mocks.ResourcePool{}
 			rp.On("GetResourceName").Return("fakename")
@@ -67,7 +67,7 @@ var _ = Describe("Server", func() {
 		Context("in all scenarios", func() {
 			var err error
 			BeforeEach(func() {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com")
@@ -81,7 +81,7 @@ var _ = Describe("Server", func() {
 		})
 	})
 	Describe("resource server lifecycle", func() {
-		// integration-like test for the resource server (positive case)
+		// integration-like test for the resource server (positive cases)
 		var (
 			fakeConf *types.ResourceConfig
 			rp       mocks.ResourcePool
@@ -102,7 +102,7 @@ var _ = Describe("Server", func() {
 				On("DiscoverDevices").Return(nil).
 				On("GetDevices").Return(map[string]*pluginapi.Device{}).
 				On("Probe").Return(true)
-			fs = &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+			fs = &utils.FakeFilesystem{}
 		})
 		Context("starting, restarting and stopping the resource server", func() {
 			It("should not fail and messages should be received on the channels", func(done Done) {
@@ -123,10 +123,9 @@ var _ = Describe("Server", func() {
 				Eventually(rs.termSignal, time.Second*10).Should(Receive())
 
 				go func() {
-					err = rs.Stop()
+					err := rs.Stop()
 					Expect(err).NotTo(HaveOccurred())
 				}()
-
 				Eventually(rs.termSignal, time.Second*10).Should(Receive())
 				Eventually(rs.stopWatcher, time.Second*10).Should(Receive())
 
@@ -144,24 +143,19 @@ var _ = Describe("Server", func() {
 				registrationServer.start()
 				defer registrationServer.stop()
 
+				// start server to register with fake kubelet
 				err := rs.Start()
 				Expect(err).NotTo(HaveOccurred())
 
-				go func() {
-					rs.Watch()
-				}()
+				// run socket watcher in background as in real-life
+				go rs.Watch()
 
-				err = rs.restart()
+				// sleep 1 second to let watcher perform at least a single socket-file check
+				time.Sleep(time.Second)
+				err = rs.Stop()
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(rs.termSignal, time.Second*10).Should(Receive())
-
-				go func() {
-					err = rs.Stop()
-					Expect(err).NotTo(HaveOccurred())
-				}()
 
 				Eventually(rs.termSignal, time.Second*10).Should(Receive())
-				Eventually(rs.stopWatcher, time.Second*10).Should(Receive())
 
 				close(done)
 			}, 12.0)
@@ -228,7 +222,7 @@ var _ = Describe("Server", func() {
 	})
 	DescribeTable("getting env variables",
 		func(in []string, expected map[string]string) {
-			fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+			fs := &utils.FakeFilesystem{}
 			defer fs.Use()()
 			deviceIDs := []string{"fakeid"}
 			rp := mocks.ResourcePool{}
@@ -255,7 +249,7 @@ var _ = Describe("Server", func() {
 	Describe("ListAndWatch", func() {
 		Context("when first Send call in DevicePlugin_ListAndWatch failed", func() {
 			It("should fail", func() {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com").
@@ -275,7 +269,7 @@ var _ = Describe("Server", func() {
 		})
 		Context("when Send call in DevicePlugin_ListAndWatch breaks", func() {
 			It("should receive not fail", func(done Done) {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com").
@@ -310,7 +304,7 @@ var _ = Describe("Server", func() {
 		})
 		Context("when received multiple update requests and then the term signal", func() {
 			It("should receive not fail", func(done Done) {
-				fs := &utils.FakeFilesystem{Dirs: []string{"tmp"}}
+				fs := &utils.FakeFilesystem{}
 				defer fs.Use()()
 				rp := mocks.ResourcePool{}
 				rp.On("GetResourceName").Return("fake.com").
